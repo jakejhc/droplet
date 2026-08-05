@@ -30,11 +30,11 @@ Measure every droplet.
 ## Advantages of this approach
 
 Robust.
-
 Works even if only part of the pipe is visible.
 Less sensitive to lighting.
 Works well with hand drawings and images.
-the goal is analyzing microfluidic sketches and images.
+
+## The goal is analyzing microfluidic sketches and images.
  
 ✅ Automatic pipe edge detection (Hough transform)
 
