@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Foundry - Microfluidic Sketch Analyzer</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #38bdf8;
+      --text: #f8fafc;
+      --border: #334155;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+    }
+
+    header {
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0 0 5px 0;
+      font-size: 1.5rem;
+      color: var(--accent);
+    }
+
+    p {
+      margin: 0;
+      color: #94a3b8;
+      font-size: 0.9rem;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #000;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    video, canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button:disabled {
+      background: #64748b;
+      cursor: not-allowed;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      background: #334155;
+    }
+
+    .status-badge.active {
+      background: #059669;
+      color: #fff;
+    }
+
+    .table-wrapper {
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #0f172a;
+      position: sticky;
+      top: 0;
+      color: var(--accent);
+    }
+
+    tr:hover {
+      background: #334155;
+    }
+
+    .stat-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .stat-item {
+      background: #0f172a;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .stat-value {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    #loading-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.85);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      font-weight: bold;
+      z-index: 10;
+    }
+  </style>
+  <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+</head>
+<body>
+
+  <header>
+    <h1>Open Foundry — Microfluidic Analyzer</h1>
+    <p>Real-time edge detection, auto-calibration (2 mm pipe ID), and droplet morphology tracking.</p>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <div class="video-wrapper">
+        <div id="loading-overlay">Loading OpenCV.js Library...</div>
+        <video id="webcam" playsinline></video>
+        <canvas id="canvasOutput"></canvas>
+      </div>
+
+      <div class="controls">
+        <button id="startBtn" disabled onclick="toggleCamera()">Start Camera</button>
+        <button id="exportBtn" disabled onclick="exportToCSV()">Export CSV</button>
+        <span id="status" class="status-badge">OpenCV Loading...</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stat-box">
+        <div class="stat-item">
+          <div class="stat-label">Pipe Detection</div>
+          <div id="pipeStatus" class="stat-value">Searching...</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Scale Factor</div>
+          <div id="scaleValue" class="stat-value">N/A</div>
+        </div>
+      </div>
+
+      <h3>Live Droplet Measurements</h3>
+      <div class="table-wrapper">
+        <table id="dropletTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Maj (mm)</th>
+              <th>Min (mm)</th>
+              <th>Area (mm²)</th>
+              <th>Circ.</th>
+              <th>AR</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="6" style="text-align:center; color: #64748b;">No droplets detected</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let streaming = false;
+    let video = document.getElementById('webcam');
+    let canvas = document.getElementById('canvasOutput');
+    let ctx = canvas.getContext('2d');
+    let currentMeasurements = [];
+
+    // OpenCV status hook
+    function onOpenCvReady() {
+      document.getElementById('loading-overlay').style.display = 'none';
+      let status = document.getElementById('status');
+      status.textContent = 'Ready';
+      status.classList.add('active');
+      document.getElementById('startBtn').disabled = false;
+    }
+
+    async function toggleCamera() {
+      if (streaming) {
+        // Stop Camera
+        let stream = video.srcObject;
+        let tracks = stream.getTracks();
+        tracks.forEach(track => track.stop());
+        video.srcObject = null;
+        streaming = false;
+        document.getElementById('startBtn').textContent = 'Start Camera';
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'environment' },
+          audio: false
+        });
+        video.srcObject = stream;
+        video.play();
+        streaming = true;
+        document.getElementById('startBtn').textContent = 'Stop Camera';
+        requestAnimationFrame(processVideo);
+      } catch (err) {
+        alert("Camera access denied or unvailable: " + err);
+      }
+    }
+
+    function processVideo() {
+      if (!streaming) return;
+
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        requestAnimationFrame(processVideo);
+        return;
+      }
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      let src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+      let gray = new cv.Mat();
+      let edges = new cv.Mat();
+
+      // Read video frame into Mat
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      src.data.set(imgData.data);
+
+      // Convert to Grayscale & Canny Edges
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+      cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+      cv.Canny(gray, edges, 50, 150, 3, false);
+
+      // 1. Hough Line Transform for Horizontal Pipe Detection
+      let lines = new cv.Mat();
+      cv.HoughLinesP(edges, lines, 1, Math.PI / 180, 50, 80, 20);
+
+      let horizontalLines = [];
+      for (let i = 0; i < lines.rows; ++i) {
+        let x1 = lines.data32S[i * 4];
+        let y1 = lines.data32S[i * 4 + 1];
+        let x2 = lines.data32S[i * 4 + 2];
+        let y2 = lines.data32S[i * 4 + 3];
+
+        let angle = Math.abs(Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI));
+        // Keep lines within 15° of horizontal
+        if (angle < 15 || angle > 165) {
+          let length = Math.hypot(x2 - x1, y2 - y1);
+          let avgY = (y1 + y2) / 2;
+          horizontalLines.push({ y: avgY, length: length, x1: x1, y1: y1, x2: x2, y2: y2 });
+        }
+      }
+
+      // Sort by line length descending
+      horizontalLines.sort((a, b) => b.length - a.length);
+
+      let pxPerMm = null;
+      let topPipeY = 0, bottomPipeY = 0;
+
+      // Find two long parallel lines with sufficient vertical distance
+      if (horizontalLines.length >= 2) {
+        let line1 = horizontalLines[0];
+        let line2 = null;
+
+        for (let i = 1; i < horizontalLines.length; i++) {
+          let dist = Math.abs(horizontalLines[i].y - line1.y);
+          if (dist > 15) { // Minimum threshold pixel separation
+            line2 = horizontalLines[i];
+            break;
+          }
+        }
+
+        if (line2) {
+          topPipeY = Math.min(line1.y, line2.y);
+          bottomPipeY = Math.max(line1.y, line2.y);
+          let pxDistance = bottomPipeY - topPipeY;
+
+          // Calibration: 2.0 mm inner diameter
+          pxPerMm = pxDistance / 2.0;
+
+          document.getElementById('pipeStatus').textContent = "Detected";
+          document.getElementById('pipeStatus').style.color = "#34d399";
+          document.getElementById('scaleValue').textContent = `${pxPerMm.toFixed(1)} px/mm`;
+
+          // Draw green pipe boundaries
+          ctx.strokeStyle = '#00ff00';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(0, topPipeY); ctx.lineTo(canvas.width, topPipeY);
+          ctx.moveTo(0, bottomPipeY); ctx.lineTo(canvas.width, bottomPipeY);
+          ctx.stroke();
+        }
+      }
+
+      if (!pxPerMm) {
+        document.getElementById('pipeStatus').textContent = "Searching...";
+        document.getElementById('pipeStatus').style.color = "#f87171";
+        document.getElementById('scaleValue').textContent = "N/A";
+      }
+
+      // 2. Droplet Detection (Find contours inside pipe region)
+      currentMeasurements = [];
+      if (pxPerMm) {
+        let contours = new cv.MatVector();
+        let hierarchy = new cv.Mat();
+        
+        // Thresholding for droplet extraction
+        let thresh = new cv.Mat();
+        cv.threshold(gray, thresh, 100, 255, cv.THRESH_BINARY_INV | cv.THRESH_OTSU);
+        cv.findContours(thresh, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+        let dropletCount = 0;
+        for (let i = 0; i < contours.size(); ++i) {
+          let cnt = contours.get(i);
+          let rect = cv.boundingRect(cnt);
+          let centerY = rect.y + rect.height / 2;
+
+          // Filter: Must fit vertically between detected pipe boundaries & minimum size
+          if (centerY > topPipeY && centerY < bottomPipeY && cnt.rows >= 5 && rect.width > 10) {
+            let rotatedRect = cv.fitEllipse(cnt);
+            
+            let majAxisPx = Math.max(rotatedRect.size.width, rotatedRect.size.height);
+            let minAxisPx = Math.min(rotatedRect.size.width, rotatedRect.size.height);
+            let areaPx = cv.contourArea(cnt);
+            let perimeterPx = cv.arcLength(cnt, true);
+
+            // Compute mm metric values
+            let majAxisMm = majAxisPx / pxPerMm;
+            let minAxisMm = minAxisPx / pxPerMm;
+            let areaMm2 = areaPx / (pxPerMm * pxPerMm);
+            let circularity = (4 * Math.PI * areaPx) / (perimeterPx * perimeterPx);
+            let aspectRatio = majAxisMm / (minAxisMm || 1);
+
+            dropletCount++;
+            currentMeasurements.push({
+              id: dropletCount,
+              majAxis: majAxisMm.toFixed(2),
+              minAxis: minAxisMm.toFixed(2),
+              area: areaMm2.toFixed(2),
+              circularity: circularity.toFixed(2),
+              aspectRatio: aspectRatio.toFixed(2)
+            });
+
+            // Overlay Ellipse and Annotations
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(
+              rotatedRect.center.x, rotatedRect.center.y,
+              rotatedRect.size.width / 2, rotatedRect.size.height / 2,
+              (rotatedRect.angle * Math.PI) / 180, 0, 2 * Math.PI
+            );
+            ctx.stroke();
+
+            // Text Label
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText(`#${dropletCount} (${majAxisMm.toFixed(1)}x${minAxisMm.toFixed(1)}mm)`, rotatedRect.center.x - 20, rotatedRect.center.y - 10);
+          }
+        }
+
+        updateTable(currentMeasurements);
+
+        contours.delete();
+        hierarchy.delete();
+        thresh.delete();
+      }
+
+      // Cleanup OpenCV matrices
+      src.delete();
+      gray.delete();
+      edges.delete();
+      lines.delete();
+
+      if (streaming) {
+        requestAnimationFrame(processVideo);
+      }
+    }
+
+    function updateTable(data) {
+      let tbody = document.querySelector('#dropletTable tbody');
+      let exportBtn = document.getElementById('exportBtn');
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: #64748b;">No droplets detected</td></tr>`;
+        exportBtn.disabled = true;
+        return;
+      }
+
+      exportBtn.disabled = false;
+      tbody.innerHTML = data.map(item => `
+        <tr>
+          <td><b>${item.id}</b></td>
+          <td>${item.majAxis}</td>
+          <td>${item.minAxis}</td>
+          <td>${item.area}</td>
+          <td>${item.circularity}</td>
+          <td>${item.aspectRatio}</td>
+        </tr>
+      `).join('');
+    }
+
+    function exportToCSV() {
+      if (currentMeasurements.length === 0) return;
+
+      let csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "ID,Major Axis (mm),Minor Axis (mm),Area (mm2),Circularity,Aspect Ratio\n";
+
+      currentMeasurements.forEach(m => {
+        csvContent += `${m.id},${m.majAxis},${m.minAxis},${m.area},${m.circularity},${m.aspectRatio}\n`;
+      });
+
+      let encodedUri = encodeURI(csvContent);
+      let link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `microfluidic_measurements_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>
