@@ -96,25 +96,8 @@ While hand-drawn sketches feature high-contrast, clean black lines on white pape
 ---
 
 ### Recommended OpenCV Processing Pipeline for Physical Chips
+<img width="715" height="433" alt="image" src="https://github.com/user-attachments/assets/f3b0da54-6eda-494f-bd2c-35fe2a2675f8" />
 
-| Microfluidic Stage | Sketch Logic (Current) | Physical Image Adaptation |
-| --- | --- | --- |
-| **Calibration** | Simple line detection (`cv.HoughLinesP`) 
-
- | ROI cropping + horizontal edge gradient filtering to ignore reflections |
-| **Pre-processing** | Direct Gaussian Blur + Canny 
-
- | Adaptive Thresholding or Background Subtraction to isolate fluids |
-| **Segmentation** | Otsu Binary Thresholding 
-
- | Morphological Closing to seal droplet borders |
-| **Morphology** | Ellipse Fitting (`cv.fitEllipse`) 
-
- | Unchanged (ellipse fitting handles rotated, squished plugs effectively) 
-
- |
-
----
 
 ### How to Upgrade the Code?
 
