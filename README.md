@@ -71,29 +71,23 @@ While hand-drawn sketches feature high-contrast, clean black lines on white pape
 
 #### 1. Channel Edge Detection (Canny & Hough Transform)
 
-* 
 **The Reality:** In real physical devices (such as PDMS, glass, or acrylic chips), channel edges are translucent or reflective. Instead of two clean edges, Canny edge detection might pick up refraction lines, bubbles, or dust.
 
 
-* **The Fix:** * Ensure **backlighting** (a diffused LED light panel behind the microfluidic channel) to create crisp, high-contrast borders.
+**The Fix:** 
+* Ensure **backlighting** (a diffused LED light panel behind the microfluidic channel) to create crisp, high-contrast borders.
 * Adjust the Canny low and high threshold parameters dynamically using a trackbar instead of fixed values (`50, 150`).
 
 
 
 #### 2. Droplet Fitting & Ellipse Approximation
+**The Reality:** Real fluidic droplets are transparent, meaning the center of the droplet is light while only the interface/meniscus creates a shadow ring. Otsu thresholding  might segment only the dark ring rather than a solid blob.
 
-* **The Reality:** Real fluidic droplets are transparent, meaning the center of the droplet is light while only the interface/meniscus creates a shadow ring. Otsu thresholding  might segment only the dark ring rather than a solid blob.
 
-
-* **The Fix:**
+**The Fix:**
 * Apply morphological operations like **Closing** (dilation followed by erosion using `cv.morphologyEx`) to fill in the dark outer ring into a solid contour before running `cv.fitEllipse`.
-
-
 * If droplets move rapidly, consider applying background subtraction (`cv.createBackgroundSubtractorMOG2()`) so only moving fluid bodies are isolated from static background noise.
 
-
-
----
 
 ### Recommended OpenCV Processing Pipeline for Physical Chips
 <img width="715" height="433" alt="image" src="https://github.com/user-attachments/assets/f3b0da54-6eda-494f-bd2c-35fe2a2675f8" />
