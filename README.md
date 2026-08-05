@@ -1,6 +1,6 @@
-#Microfluidic Pipe and Droplet Analyzer with OpenCV
+# Microfluidic Pipe and Droplet Analyzer with OpenCV
 
-##Place The Pipe horizontally
+## Place The Pipe horizontally
 
 This is a complete, single-file HTML application built with OpenCV.js for real-time computer vision processing directly in the browser. You can save this file as index.html and deploy it straight to GitHub Pages.  It implements the precise horizontal line detection logic using OpenCV's Canny edge detector and Hough Line Transform, automatically calculates scale from the $2\text{ mm}$ pipe inner diameter, fits ellipses to detected droplets inside the pipe, overlays real-time HUD annotations, displays a live measurements table, and lets you export the data directly to CSV.
 
