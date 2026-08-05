@@ -1,1 +1,1 @@
-jakejhc.github.io/droplet
+Please view demo at: jakejhc.github.io/droplet
