@@ -6,9 +6,9 @@ This is a complete, single-file HTML application built with OpenCV.js for real-t
 
 Features Built Into This ScriptClient-Side Computer Vision: Powered by OpenCV.js via CDN, requiring no backend servers or Python installations.  Automatic Parallel Line Calibration: Uses cv.Canny and cv.HoughLinesP to filter horizontal lines, selects the two longest parallel lines, and auto-scales the live pixel distance to $2.0\text{ mm}$.Spatial Droplet Filtering: Restricts droplet detection exclusively to contours located inside the pipe bounds.Morphological Analysis: Fits an ellipse (cv.fitEllipse) to calculate Major Axis, Minor Axis, Surface Area ($\text{mm}^2$), Circularity, and Aspect Ratio in real time.Live Export: Exports snapshot measurements to a structured .csv file.
 
-Please view demo at: [jakejhc.github.io/droplet](https://jakejhc.github.io/droplet/)
+# Please view demo at: [jakejhc.github.io/droplet](https://jakejhc.github.io/droplet/)
 
-##Prompt for Gemini
+## Prompt for Gemini
 
 write a single html for me to deploy on github: use webcam to analyze close up drawing/images consisting a pipe (inner diameter assumed to be 2mm) and a few droplet shapes. overlay realtime identified contour and length/width measurements of the droplets (assume pipe inner  diameter is 2mm) to the webcam video. 
 
@@ -61,7 +61,7 @@ the goal is analyzing microfluidic sketches and images.
 ✅ Live measurement table beside the webcam
 This version would be significantly more accurate and better suited for analyzing hand-drawn or printed microfluidic diagrams.
 
-##Yes, the Hough line and contour analysis algorithm designed for hand-drawn sketches **can work on real-world microfluidic images**, but its reliability will depend heavily on lighting, physical optical distortions, and surface reflections.
+## The Hough line and contour analysis algorithm designed for hand-drawn sketches **can work on real-world microfluidic images**, but its reliability will depend heavily on lighting, physical optical distortions, and surface reflections.
 
 While hand-drawn sketches feature high-contrast, clean black lines on white paper, real microfluidic channels and physical droplets present distinct computer vision challenges:
 
