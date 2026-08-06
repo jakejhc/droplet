@@ -1,4 +1,5 @@
 # Microfluidic Pipe and Droplet Analyzer with OpenCV
+<img width="600" height="338" alt="852-ezgif com-resize" src="https://github.com/user-attachments/assets/37c1f39f-8739-4dd3-9f32-4cb89f3185c0" />
 
 ## Place The Pipe horizontally
 
